@@ -1,0 +1,13 @@
+import re
+
+
+def tokenize(text: str):
+    tokenized = re.split('(\w+)', text)
+    return [word for word in tokenized if word != '']
+
+
+if __name__ == "__main__":
+    print(tokenize("lorem, ipsum"))
+    assert tokenize("lorem, ipsum") == ['lorem', ', ', 'ipsum']
+    text = input()
+    print(tokenize(text))

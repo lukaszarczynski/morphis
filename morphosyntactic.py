@@ -1,11 +1,15 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import sys
+from typing import List
 
 CONSOLE_WIDTH = 80
+DICT_LEN = 4811854
 
 
 def progress_bar(console_width=CONSOLE_WIDTH):
     already_printed = 0
+    print(" " * (console_width - 1), "|", sep="")
+    print(" " * (console_width - 1), "|", "\b" * console_width, sep="", end="")
 
     def print_progress(progress):
         nonlocal already_printed
@@ -23,18 +27,15 @@ class Morphosyntactic:
 
     def create_morphosyntactic_dictionary(self):
         with open(self.dictionary_file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-            dictionary_length = len(lines)
             print("+++ creating morphosyntactic dictionary +++")
-            print(" " * (CONSOLE_WIDTH-1), "|")
             print_progress = progress_bar()
-            for line_number, line in enumerate(lines):
+            for line_number, line in enumerate(file.readlines()):
                 if line_number % 1000 == 0:
-                    progress = line_number / dictionary_length
+                    progress = line_number / DICT_LEN
                     print_progress(progress)
                 base_word, word, tags = line.rstrip("\n").split(";")
                 tags = tuple(tags.split("+"))
-                self.morphosyntactic_dictionary[word].append((base_word, tags))
+                self.morphosyntactic_dictionary[word.lower()].append((word, base_word, tags))
             print("\n+++ morphosyntactic dictionary created +++")
         return self.morphosyntactic_dictionary
 

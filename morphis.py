@@ -71,4 +71,4 @@ if __name__ == "__main__":
     print(pasta)
     for token in pasta:
         if token.isalnum():
-            print(token, "=>", morph.morphosyntactic_dictionary[token])
+            print(token, "=>", morph.morphosyntactic_dictionary[token.lower()])

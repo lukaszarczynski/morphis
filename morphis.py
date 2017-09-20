@@ -54,9 +54,23 @@ def find_morphosyntactic() -> str:
     else:
         path = ""
         while not isfile(path):
-            print("Pobierz słownik morfosyntaktyczny\n"
-                  "https://github.com/morfologik/polimorfologik/releases/tag/2.1\n"
-                  "i podaj ścieżkę do niego")
+            print("Pobierz słownik morfosyntaktyczny"
+                  "https://github.com/morfologik/polimorfologik/releases/tag/2.1"
+                  "i podaj ścieżkę do niego", sep="\n")
+            path = input().rstrip("\n").strip('"')
+        return path
+
+
+def find_ngrams(n: int) -> str:
+    """Find file with n-grams"""
+    if isfile("{}grams".format(n)):
+        return "{}grams".format(n)
+    else:
+        path = ""
+        while not isfile(path):
+            print("Pobierz plik {}grams.gz".format(n),
+                  "http://zil.ipipan.waw.pl/NKJPNGrams",
+                  "rozpakuj i podaj ścieżkę do pliku {}grams".format(n), sep="\n")
             path = input().rstrip("\n").strip('"')
         return path
 

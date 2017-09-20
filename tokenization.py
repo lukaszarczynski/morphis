@@ -2,6 +2,7 @@ import re
 
 
 def tokenize(text: str):
+    """Split text into list of alphanumeric words and other characters"""
     tokenized = re.split('(\w+)', text)
     return [word for word in tokenized if word != '']
 

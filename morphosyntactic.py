@@ -1,5 +1,6 @@
-from collections import defaultdict
 import sys
+from collections import defaultdict, namedtuple
+from enum import Enum
 from typing import (
     List,
     Set,
@@ -8,6 +9,38 @@ from typing import (
 
 CONSOLE_WIDTH = 80
 DICT_LEN = 4811854
+
+
+class GrammarGender(Enum):
+    MASCULINE_HUMAN = 0
+    MASCULINE_ANIMATE = 1
+    MASCULINE_INANIMATE = 2
+    FEMININE = 3
+    NEUTER = 4
+
+
+class GrammarAspect(Enum):
+    IMPERFECTIVE = 0
+    PERFECTIVE = 1
+    BOTH = 2
+
+
+class GrammarNumber(Enum):
+    SINGULAR = 0
+    PLURAL = 1
+
+
+class GrammarCase(Enum):
+    NOMINATIVE = 0
+    GENITIVE = 1
+    DATIVE = 2
+    ACCUSATIVE = 3
+    INSTRUMENTAL = 4
+    LOCATIVE = 5
+    VOCATIVE = 6
+
+
+Declension = namedtuple(typename="Declension", field_names="number case")
 
 
 def progress_bar(console_width=CONSOLE_WIDTH):
@@ -26,9 +59,7 @@ def progress_bar(console_width=CONSOLE_WIDTH):
     return print_progress
 
 
-
-
-class Meaning():
+class Meaning:
     """Represents one of possible meanings of given word,
     where meaning is map from given word to base word,
     and there is exactly one part of speech associated with this meaning"""
@@ -40,7 +71,8 @@ class Meaning():
         self.part_of_speech = self.unfiltered_tags[0][0]
 
     def __str__(self):
-        return "(meaning: {0}, base_word: {1}, unfiltered_tags: {2})".format(self.word, self.base_word, self.unfiltered_tags)
+        return "(part_of_speech: {0}, meaning: {1}, base_word: {2}, unfiltered_tags: {3})".format(
+            self.part_of_speech, self.word, self.base_word, self.unfiltered_tags)
 
     @staticmethod
     def fix_tags(tags: List[str]) -> List[List[str]]:
@@ -58,7 +90,67 @@ class Meaning():
 
 
 class Noun(Meaning):
-    ...
+    """Stores additional grammar categories that Polish noun may have, including declension"""
+
+    gender_shortcuts = {
+        "m1": GrammarGender.MASCULINE_HUMAN,
+        "m2": GrammarGender.MASCULINE_ANIMATE,
+        "m3": GrammarGender.MASCULINE_INANIMATE,
+        "f": GrammarGender.FEMININE,
+        "n": GrammarGender.NEUTER,
+        "n1": GrammarGender.NEUTER,
+        "n2": GrammarGender.NEUTER
+    }
+
+    aspect_shortcuts = {
+        "imperf": GrammarAspect.IMPERFECTIVE,
+        "perf": GrammarAspect.PERFECTIVE,
+        "imperf.perf": GrammarAspect.BOTH
+    }
+
+    number_shortcuts = {
+        "sg": GrammarNumber.SINGULAR,
+        "pl": GrammarNumber.PLURAL
+    }
+
+    case_shortcuts = {
+        "nom": GrammarCase.NOMINATIVE,
+        "gen": GrammarCase.GENITIVE,
+        "dat": GrammarCase.DATIVE,
+        "acc": GrammarCase.ACCUSATIVE,
+        "inst": GrammarCase.INSTRUMENTAL,
+        "loc": GrammarCase.LOCATIVE,
+        "voc": GrammarCase.VOCATIVE
+    }
+
+    def __init__(self, word: str, base_word: str, tags: List[str]):
+        super().__init__(word, base_word, tags)
+        self.gerund = self.unfiltered_tags[0][0] == "ger"
+        genders = {tag[3] for tag in self.unfiltered_tags}
+        assert len(genders) == 1
+        self.gender = self.gender_shortcuts[genders.pop()]
+        self.negated = None
+        self.aspect = None
+        if self.gerund:
+            aspects = {tag[4] for tag in self.unfiltered_tags}
+            assert len(aspects) == 1
+            self.aspect = self.aspect_shortcuts[aspects.pop()]
+            negations = {tag[5] for tag in self.unfiltered_tags}
+            assert len(negations) == 1
+            self.negated = negations.pop() == "neg"
+        self.declensions = []  # type: List[Declension[GrammarNumber, GrammarCase]]
+        for tag in self.unfiltered_tags:
+            number = self.number_shortcuts[tag[1]]  # type: GrammarNumber
+            case = self.case_shortcuts[tag[2]]  # type: GrammarCase
+            self.declensions.append(Declension(number, case))
+
+    def __str__(self):
+        _str = "(part_of_speech: {0}, meaning: {1}, base_word: {2}, gender: {3}, ".format(
+            self.part_of_speech, self.word, self.base_word, self.gender)
+        if self.gerund:
+            _str += "acpect: {0}, negated: {1}, ".format(self.aspect, self.negated)
+        _str += "declensions: {0})".format(self.declensions)
+        return _str
 
 
 class AmbiguousWord:
@@ -66,12 +158,17 @@ class AmbiguousWord:
     def __init__(self, original_word: str, meanings: List):
         self.word = original_word
         self.meanings = []  # type: List[Meaning]
-        fixed_meanings = []
+
+        fixed_meanings = []  # type: List[Tuple[str, str, tuple]]
         for raw_meaning in meanings:
             fixed_meanings += AmbiguousWord.split_by_parts_of_speech(raw_meaning)
 
         for raw_meaning in fixed_meanings:
-            meaning = Meaning(*raw_meaning)
+            part_of_speech = self.get_parts_of_speech_from_meaning(raw_meaning).pop()
+            if part_of_speech in self.noun_types:
+                meaning = Noun(*raw_meaning)
+            else:
+                meaning = Meaning(*raw_meaning)
             self.meanings.append(meaning)
 
     def __str__(self):
@@ -123,6 +220,14 @@ class AmbiguousWord:
         """Returns part of speech of every stored meaning of ambiguous word"""
         return {meaning.part_of_speech for meaning in self.meanings}
 
+    def possible_noun(self) -> bool:
+        """Some of meanings are nouns"""
+        return any(isinstance(meaning, Noun) for meaning in self.meanings)
+
+    def certain_noun(self) -> bool:
+        """All meanings are nouns"""
+        return all(isinstance(meaning, Noun) for meaning in self.meanings)
+
 
 class Morphosyntactic:
     def __init__(self, dictionary_file_path):
@@ -165,6 +270,7 @@ if __name__ == "__main__":
     sample_meaning = AmbiguousWord("pić", d["pić"]).meanings[0]
     print(sample_meaning)
     assert ['subst', 'pl', 'gen', 'n2'] in sample_meaning.unfiltered_tags
+
     sample_word = AmbiguousWord("picie", d["picie"])
     print(sample_word)
     assert "pita" in [meaning.base_word for meaning in sample_word.meanings]
@@ -172,6 +278,7 @@ if __name__ == "__main__":
                ['subst', 'sg', 'dat', 'f'],
                ['subst', 'sg', 'loc', 'f']
            ] in [meaning.unfiltered_tags for meaning in sample_word.meanings]
+
     sample_raw_meaning = ('pić', 'picie', ('subst:pl:gen:n2',))
     sample_raw_mixed_meaning = (
         'czerwony', 'czerwony',
@@ -192,3 +299,17 @@ if __name__ == "__main__":
     print(tricky_word)
     assert tricky_word.parts_of_speech() == {"adj", "subst"}
     assert {meaning.base_word for meaning in tricky_word.meanings} == {"czerwony"}
+
+    sample_verb = AmbiguousWord("spać", d["spać"])
+    sample_noun = sample_word
+
+    assert not sample_verb.possible_noun() and not sample_verb.certain_noun()
+    assert sample_noun.possible_noun() and sample_noun.certain_noun()
+    assert tricky_word.possible_noun() and not tricky_word.certain_noun()
+
+    sample_noun_meaning = Noun("czerwony", "czerwony", ['subst:sg:nom:m1', 'subst:sg:voc:m1'])
+    print(sample_noun_meaning)
+    assert not sample_noun_meaning.gerund
+    assert sample_noun_meaning.gender == GrammarGender.MASCULINE_HUMAN
+    assert set(sample_noun_meaning.declensions) == {(GrammarNumber.SINGULAR, GrammarCase.NOMINATIVE),
+                                                    (GrammarNumber.SINGULAR, GrammarCase.VOCATIVE)}

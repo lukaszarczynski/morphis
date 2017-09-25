@@ -64,20 +64,20 @@ class Noun(Meaning):
         self.gerund = self.unfiltered_tags[0][0] == "ger"
         genders = {tag[3] for tag in self.unfiltered_tags}
         assert len(genders) == 1
-        self.gender = self.gender_shortcuts[genders.pop()]
+        self.gender = grammar_category.gender_shortcuts[genders.pop()]
         self.negated = None
         self.aspect = None
         if self.gerund:
             aspects = {tag[4] for tag in self.unfiltered_tags}
             assert len(aspects) == 1
-            self.aspect = self.aspect_shortcuts[aspects.pop()]
+            self.aspect = grammar_category.aspect_shortcuts[aspects.pop()]
             negations = {tag[5] for tag in self.unfiltered_tags}
             assert len(negations) == 1
             self.negated = negations.pop() == "neg"
         self.declensions = []  # type: List[grammar_category.Declension[grammar_category.Number, grammar_category.Case]]
         for tag in self.unfiltered_tags:
-            number = self.number_shortcuts[tag[1]]  # type: grammar_category.Number
-            case = self.case_shortcuts[tag[2]]  # type: grammar_category.Case
+            number = grammar_category.number_shortcuts[tag[1]]  # type: grammar_category.Number
+            case = grammar_category.case_shortcuts[tag[2]]  # type: grammar_category.Case
             self.declensions.append(grammar_category.Declension(number, case))
 
     def __str__(self):
@@ -97,7 +97,9 @@ class AmbiguousWord:
 
         fixed_meanings = []  # type: List[Tuple[str, str, tuple]]
         for raw_meaning in meanings:
-            fixed_meanings += AmbiguousWord.split_by_parts_of_speech(raw_meaning)
+            pos_meanings = AmbiguousWord.split_by_parts_of_speech(raw_meaning)
+            for pos_meaning in pos_meanings:
+                fixed_meanings += AmbiguousWord.split_by_genders(pos_meaning)
 
         for raw_meaning in fixed_meanings:
             part_of_speech = self.get_parts_of_speech_from_meaning(raw_meaning).pop()
@@ -130,6 +132,13 @@ class AmbiguousWord:
         return parts_of_speech
 
     @staticmethod
+    def get_genders_from_meaning(meaning: Tuple[str, str, Tuple]) -> Set[str]:
+        """Returns genders occuring in raw list of meanings"""
+        tags = meaning[2]
+        genders = {tag.split(":")[3] for tag in tags if tag.split(":")[0] in AmbiguousWord.noun_types}
+        return genders
+
+    @staticmethod
     def split_by_parts_of_speech(meaning: Tuple[str, str, Tuple]) -> List[Tuple[str, str, Tuple]]:
         """Splits raw meaning into list of raw meanings,
         where each tag of each meaning has exactly one part of speech"""
@@ -149,6 +158,33 @@ class AmbiguousWord:
         splitted_meanings = []
         for part_of_speech in parts_of_speech:
             classified_tags = get_tags_with_given_part_of_speech(part_of_speech)
+            splitted_meanings.append((word, base_word, tuple(classified_tags)))
+        return splitted_meanings
+
+    @staticmethod
+    def split_by_genders(meaning: Tuple[str, str, Tuple]) -> List[Tuple[str, str, Tuple]]:
+        """Splits raw meaning into list of raw meanings,
+        where each tag of each meaning has exactly one gender"""
+
+        def get_tags_with_given_gender(given_gender) -> List[str]:
+            tags = []
+            for tag in meaning[2]:
+                if tag.split(":")[3] == given_gender:
+                    tags.append(tag)
+            return tags
+
+        part_of_speech = AmbiguousWord.get_parts_of_speech_from_meaning(meaning).pop()
+        if part_of_speech not in AmbiguousWord.noun_types:
+            return [meaning]
+
+        genders = AmbiguousWord.get_genders_from_meaning(meaning)
+        if len(genders) == 1:
+            return [meaning]
+
+        word, base_word, _ = meaning
+        splitted_meanings = []
+        for gender in genders:
+            classified_tags = get_tags_with_given_gender(gender)
             splitted_meanings.append((word, base_word, tuple(classified_tags)))
         return splitted_meanings
 
@@ -253,3 +289,5 @@ if __name__ == "__main__":
     assert set(sample_noun_meaning.declensions) == {
         (grammar_category.Number.SINGULAR, grammar_category.Case.NOMINATIVE),
         (grammar_category.Number.SINGULAR, grammar_category.Case.VOCATIVE)}
+
+    multiple_gender = AmbiguousWord("mają", d["mają"])

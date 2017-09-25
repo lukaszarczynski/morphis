@@ -1,46 +1,13 @@
 import sys
-from collections import defaultdict, namedtuple
-from enum import Enum
 from typing import (
     List,
     Set,
     Tuple
 )
+import grammar_category
 
 CONSOLE_WIDTH = 80
 DICT_LEN = 4811854
-
-
-class GrammarGender(Enum):
-    MASCULINE_HUMAN = 0
-    MASCULINE_ANIMATE = 1
-    MASCULINE_INANIMATE = 2
-    FEMININE = 3
-    NEUTER = 4
-
-
-class GrammarAspect(Enum):
-    IMPERFECTIVE = 0
-    PERFECTIVE = 1
-    BOTH = 2
-
-
-class GrammarNumber(Enum):
-    SINGULAR = 0
-    PLURAL = 1
-
-
-class GrammarCase(Enum):
-    NOMINATIVE = 0
-    GENITIVE = 1
-    DATIVE = 2
-    ACCUSATIVE = 3
-    INSTRUMENTAL = 4
-    LOCATIVE = 5
-    VOCATIVE = 6
-
-
-Declension = namedtuple(typename="Declension", field_names="number case")
 
 
 def progress_bar(console_width=CONSOLE_WIDTH):
@@ -92,37 +59,6 @@ class Meaning:
 class Noun(Meaning):
     """Stores additional grammar categories that Polish noun may have, including declension"""
 
-    gender_shortcuts = {
-        "m1": GrammarGender.MASCULINE_HUMAN,
-        "m2": GrammarGender.MASCULINE_ANIMATE,
-        "m3": GrammarGender.MASCULINE_INANIMATE,
-        "f": GrammarGender.FEMININE,
-        "n": GrammarGender.NEUTER,
-        "n1": GrammarGender.NEUTER,
-        "n2": GrammarGender.NEUTER
-    }
-
-    aspect_shortcuts = {
-        "imperf": GrammarAspect.IMPERFECTIVE,
-        "perf": GrammarAspect.PERFECTIVE,
-        "imperf.perf": GrammarAspect.BOTH
-    }
-
-    number_shortcuts = {
-        "sg": GrammarNumber.SINGULAR,
-        "pl": GrammarNumber.PLURAL
-    }
-
-    case_shortcuts = {
-        "nom": GrammarCase.NOMINATIVE,
-        "gen": GrammarCase.GENITIVE,
-        "dat": GrammarCase.DATIVE,
-        "acc": GrammarCase.ACCUSATIVE,
-        "inst": GrammarCase.INSTRUMENTAL,
-        "loc": GrammarCase.LOCATIVE,
-        "voc": GrammarCase.VOCATIVE
-    }
-
     def __init__(self, word: str, base_word: str, tags: List[str]):
         super().__init__(word, base_word, tags)
         self.gerund = self.unfiltered_tags[0][0] == "ger"
@@ -138,11 +74,11 @@ class Noun(Meaning):
             negations = {tag[5] for tag in self.unfiltered_tags}
             assert len(negations) == 1
             self.negated = negations.pop() == "neg"
-        self.declensions = []  # type: List[Declension[GrammarNumber, GrammarCase]]
+        self.declensions = []  # type: List[grammar_category.Declension[grammar_category.Number, grammar_category.Case]]
         for tag in self.unfiltered_tags:
-            number = self.number_shortcuts[tag[1]]  # type: GrammarNumber
-            case = self.case_shortcuts[tag[2]]  # type: GrammarCase
-            self.declensions.append(Declension(number, case))
+            number = self.number_shortcuts[tag[1]]  # type: grammar_category.Number
+            case = self.case_shortcuts[tag[2]]  # type: grammar_category.Case
+            self.declensions.append(grammar_category.Declension(number, case))
 
     def __str__(self):
         _str = "(part_of_speech: {0}, meaning: {1}, base_word: {2}, gender: {3}, ".format(
@@ -231,12 +167,12 @@ class AmbiguousWord:
 
 class Morphosyntactic:
     def __init__(self, dictionary_file_path):
-        self.morphosyntactic_dictionary = defaultdict(lambda: [])
+        self.morphosyntactic_dictionary = {}
         self.dictionary_file_path = dictionary_file_path
 
     def create_morphosyntactic_dictionary(self):
         with open(self.dictionary_file_path, 'r', encoding='utf-8') as file:
-            print("+++ creating morphosyntactic dictionary +++")
+            print("Tworzenie słownika morfosyntaktycznego:")
             print_progress = progress_bar()
             for line_number, line in enumerate(file.readlines()):
                 if line_number % 1000 == 0:
@@ -244,9 +180,12 @@ class Morphosyntactic:
                     print_progress(progress)
                 base_word, word, tags = line.rstrip("\n").split(";")
                 tags = tuple(tags.split("+"))
-                self.morphosyntactic_dictionary[word.lower()].append((word, base_word, tags))
-            print("\n+++ morphosyntactic dictionary created +++")
+                if word.lower() in self.morphosyntactic_dictionary:
+                    self.morphosyntactic_dictionary[word.lower()].append((word, base_word, tags))
+                else:
+                    self.morphosyntactic_dictionary[word.lower()] = [(word, base_word, tags)]
         return self.morphosyntactic_dictionary
+
 
 if __name__ == "__main__":
     morph = Morphosyntactic("polimorfologik-2.1.txt")
@@ -310,6 +249,7 @@ if __name__ == "__main__":
     sample_noun_meaning = Noun("czerwony", "czerwony", ['subst:sg:nom:m1', 'subst:sg:voc:m1'])
     print(sample_noun_meaning)
     assert not sample_noun_meaning.gerund
-    assert sample_noun_meaning.gender == GrammarGender.MASCULINE_HUMAN
-    assert set(sample_noun_meaning.declensions) == {(GrammarNumber.SINGULAR, GrammarCase.NOMINATIVE),
-                                                    (GrammarNumber.SINGULAR, GrammarCase.VOCATIVE)}
+    assert sample_noun_meaning.gender == grammar_category.Gender.MASCULINE_HUMAN
+    assert set(sample_noun_meaning.declensions) == {
+        (grammar_category.Number.SINGULAR, grammar_category.Case.NOMINATIVE),
+        (grammar_category.Number.SINGULAR, grammar_category.Case.VOCATIVE)}

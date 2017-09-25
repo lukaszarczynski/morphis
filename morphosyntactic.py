@@ -64,7 +64,7 @@ class Noun(Meaning):
         self.gerund = self.unfiltered_tags[0][0] == "ger"
         genders = {tag[3] for tag in self.unfiltered_tags}
         assert len(genders) == 1
-        self.gender = grammar_category.gender_shortcuts[genders.pop()]
+        self.gender = grammar_category.gender_shortcuts.get(genders.pop())
         self.negated = None
         self.aspect = None
         if self.gerund:
@@ -93,7 +93,7 @@ class AmbiguousWord:
     """Stores multiple possible meanings of given word"""
     def __init__(self, original_word: str, meanings: List):
         self.word = original_word
-        self.meanings = []  # type: List[Meaning]
+        self.meanings = []  # type: List[Meaning, Noun]
 
         fixed_meanings = []  # type: List[Tuple[str, str, tuple]]
         for raw_meaning in meanings:
@@ -220,6 +220,7 @@ class Morphosyntactic:
                     self.morphosyntactic_dictionary[word.lower()].append((word, base_word, tags))
                 else:
                     self.morphosyntactic_dictionary[word.lower()] = [(word, base_word, tags)]
+            print("\n")
         return self.morphosyntactic_dictionary
 
 
@@ -291,3 +292,4 @@ if __name__ == "__main__":
         (grammar_category.Number.SINGULAR, grammar_category.Case.VOCATIVE)}
 
     multiple_gender = AmbiguousWord("mają", d["mają"])
+    print(AmbiguousWord("gościa", d["gościa"]))

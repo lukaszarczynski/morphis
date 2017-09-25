@@ -26,13 +26,14 @@ def are_you_human():
         print("WITAMY W TAJNYM INTERNECIE ROBOTÓW")
         global DEBUG
         DEBUG = True
+        replacing.DEBUG = True
     else:
         print("Nawet się nie starasz...")
 
 
 def read_copypasta() -> List[str]:
     """Reads copypasta from input or from file, returns arrays of tokens and non-alphanumeric strings"""
-    print("\nPrzeciągnij plik z pastą do tego okna lub wklej tu pastę\n")
+    print("\nPrzeciągnij plik z pastą do tego okna lub wklej tu pastę (wciśnij 3*Enter, aby zakończyć)\n")
 
     lines = []
     while True:
@@ -129,12 +130,10 @@ if __name__ == "__main__":
         if "".join(pasta).strip() == "":
             should_continue = False
             break
-        if DEBUG:
-            print(pasta)
-            for token in pasta:
-                if token.isalnum():
-                    print(token, "=>", len(morph.morphosyntactic_dictionary.get(token.lower(), [])))
 
         chosen_words = choose_words()
         if DEBUG:
             print(chosen_words)
+        replacer = replacing.Replacing(pasta, chosen_words, morph)
+        replaced_pasta = replacer.replace()
+        print("".join(replaced_pasta))

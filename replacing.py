@@ -33,7 +33,7 @@ class Replacing:
         """Loads words which would never be replaced"""
         ignored_path = path
         if isfile(ignored_path):
-            with open(ignored_path) as file:
+            with open(ignored_path, encoding="utf-8") as file:
                 for line in file:
                     self.ignored_words.append(line.strip().lower())
 
@@ -134,4 +134,6 @@ if __name__ == "__main__":
     morph = morphosyntactic.Morphosyntactic("polimorfologik-2.1.txt")
     morph.create_morphosyntactic_dictionary()
     replacer = Replacing(pasta, words, morph)
+    assert "raz" in replacer.ignored_words
+    assert "możliwość" in replacer.ignored_words
     print("".join(replacer.replace()))

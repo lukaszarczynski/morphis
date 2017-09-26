@@ -64,20 +64,20 @@ class Noun(Meaning):
         self.gerund = self.unfiltered_tags[0][0] == "ger"
         genders = {tag[3] for tag in self.unfiltered_tags}
         assert len(genders) == 1
-        self.gender = grammar_category.gender_shortcuts.get(genders.pop())
+        self.gender = grammar_category.gender_abbreviations.get(genders.pop())
         self.negated = None
         self.aspect = None
         if self.gerund:
             aspects = {tag[4] for tag in self.unfiltered_tags}
             assert len(aspects) == 1
-            self.aspect = grammar_category.aspect_shortcuts[aspects.pop()]
+            self.aspect = grammar_category.aspect_abbreviations[aspects.pop()]
             negations = {tag[5] for tag in self.unfiltered_tags}
             assert len(negations) == 1
             self.negated = negations.pop() == "neg"
         self.declensions = []  # type: List[grammar_category.Declension[grammar_category.Number, grammar_category.Case]]
         for tag in self.unfiltered_tags:
-            number = grammar_category.number_shortcuts[tag[1]]  # type: grammar_category.Number
-            case = grammar_category.case_shortcuts[tag[2]]  # type: grammar_category.Case
+            number = grammar_category.number_abbreviations[tag[1]]  # type: grammar_category.Number
+            case = grammar_category.case_abbreviations[tag[2]]  # type: grammar_category.Case
             self.declensions.append(grammar_category.Declension(number, case))
 
     def __str__(self):
@@ -202,11 +202,13 @@ class AmbiguousWord:
 
 
 class Morphosyntactic:
+    """Stores morphosyntactic dictionary"""
     def __init__(self, dictionary_file_path):
         self.morphosyntactic_dictionary = {}
         self.dictionary_file_path = dictionary_file_path
 
     def create_morphosyntactic_dictionary(self):
+        """Creates dictionary representation from file"""
         with open(self.dictionary_file_path, 'r', encoding='utf-8') as file:
             print("Tworzenie słownika morfosyntaktycznego:")
             print_progress = progress_bar()

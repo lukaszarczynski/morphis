@@ -56,34 +56,35 @@ def read_copypasta() -> List[str]:
 
 
 def choose_words() -> List[Tuple[Dict, grammar_category.Gender, float]]:
-    word = {
-        grammar_category.Number.SINGULAR: {},
-        grammar_category.Number.PLURAL: {}
-    }
-    gender = None
-    while gender is None:
-        print("Jakiego rodzaju rzeczowniki chcesz zamienić?",
-              "m1 -- męski, osobowy",
-              "m2 -- męski, ożywiony",
-              "m3 -- męski, nieożywiony",
-              "f -- żeński",
-              "n -- nijaki", sep="\n")
-        gender = grammar_category.gender_shortcuts.get(input(">"))
-    print("Podaj rzeczownik tego rodzaju")
-    word[grammar_category.Number.SINGULAR][grammar_category.Case.NOMINATIVE] = input()
-    print("Liczba pojedyncza")
-    get_word_cases(word, number=grammar_category.Number.SINGULAR)
-    print("Liczba mnoga")
-    get_word_cases(word, number=grammar_category.Number.PLURAL)
-    probability = -1.
-    while probability < 0 or probability > 1:
-        probability = float(input("Z jakim prawdopodobieństwem zamienić słowo? [0-1] "))
-    return [(word, gender, probability)]
+    """Reads replacement words and probability of replacing, for every gender"""
+    words = []
+    ordered_gender_shortcuts = ["m1", "m2", "m3", "f", "n"]
+    for gender in ordered_gender_shortcuts:
+        word = {
+            grammar_category.Number.SINGULAR: {},
+            grammar_category.Number.PLURAL: {}
+        }
+        print("Podaj rzeczownik rodzaju", grammar_category.gender_examples[gender],
+              "lub wciśnij Enter, aby nie zamieniać rzeczowników tego rodzaju")
+        input_word = input()
+        if not input_word:
+            continue
+        word[grammar_category.Number.SINGULAR][grammar_category.Case.NOMINATIVE] = input_word
+        print("Liczba pojedyncza")
+        get_word_cases(word, number=grammar_category.Number.SINGULAR)
+        print("Liczba mnoga")
+        get_word_cases(word, number=grammar_category.Number.PLURAL)
+        probability = -1.
+        while probability < 0 or probability > 1:
+            probability = float(input("Z jakim prawdopodobieństwem zamienić słowo? [0-1] "))
+        words.append((word, grammar_category.gender_abbreviations[gender], probability))
+    return words
 
 
 def get_word_cases(word, *, number):
+    """Reads declination of Polish noun, giving hints about Polish cases"""
     for case_shortcut in grammar_category.cases_order:
-        case = grammar_category.case_shortcuts[case_shortcut]
+        case = grammar_category.case_abbreviations[case_shortcut]
         if case in word[number]:
             print(grammar_category.case_to_questions[case_shortcut], ": ", word[number][case])
         else:
@@ -131,7 +132,7 @@ if __name__ == "__main__":
             should_continue = False
             break
 
-        chosen_words = choose_words()
+        chosen_words = choose_words()  # TODO: Possibility to process many pastas with same chosen words
         if DEBUG:
             print(chosen_words)
         replacer = replacing.Replacing(pasta, chosen_words, morph)

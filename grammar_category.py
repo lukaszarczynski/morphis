@@ -33,7 +33,7 @@ class Case(Enum):
 
 Declension = namedtuple(typename="Declension", field_names="number case")
 
-gender_shortcuts = {
+gender_abbreviations = {
     "m1": Gender.MASCULINE_HUMAN,
     "m2": Gender.MASCULINE_ANIMATE,
     "m3": Gender.MASCULINE_INANIMATE,
@@ -43,18 +43,18 @@ gender_shortcuts = {
     "n2": Gender.NEUTER
 }
 
-aspect_shortcuts = {
+aspect_abbreviations = {
     "imperf": Aspect.IMPERFECTIVE,
     "perf": Aspect.PERFECTIVE,
     "imperf.perf": Aspect.BOTH
 }
 
-number_shortcuts = {
+number_abbreviations = {
     "sg": Number.SINGULAR,
     "pl": Number.PLURAL
 }
 
-case_shortcuts = {
+case_abbreviations = {
     "nom": Case.NOMINATIVE,
     "gen": Case.GENITIVE,
     "dat": Case.DATIVE,
@@ -72,6 +72,14 @@ case_to_questions = {
     "inst": "narzędnik (z kim? z czym?)",
     "loc": "miejscownik (o kim?, o czym?)",
     "voc": "wołacz (ty Janie _)"
+}
+
+gender_examples = {
+    "m1": "męski, osobowy (np. papież)",
+    "m2": "męski, ożywiony (np. mamut)",
+    "m3": "męski, nieożywiony (np. melon)",
+    "f": "żeński",
+    "n": "nijaki"
 }
 
 cases_order = ["nom", "gen", "dat", "acc", "inst", "loc", "voc"]

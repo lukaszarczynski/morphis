@@ -48,9 +48,20 @@ class Replacing:
                         self.select_meaning()
                         self.select_declension()
                         self.print_debug_info()
-                        self.pasta[token_idx] = self.replace_single_noun()  # TODO: lower/uppercase adjusting
+                        word_after_replace = self.replace_single_noun()
+                        self.pasta[token_idx] = self.lower_or_uppercase(word_after_replace, token)
                     self.update_iteration_data()  # TODO: maybe it should be updated even if word is not in dictionary
         return self.pasta
+
+    def lower_or_uppercase(self, replaced_word: str, original_word: str) -> str:
+        """Changes replaced word to use same uppercase style as original word
+        (if original word was ALL UPPERCASE, replacet word will also use this convention)"""
+        if original_word.isupper() and len(original_word) > 1:
+            return replaced_word.upper()
+        elif original_word.istitle() and not self.selected_meaning.base_word.istitle():
+            return replaced_word[0].upper() + replaced_word[1:]
+        else:
+            return replaced_word
 
     def update_iteration_data(self):
         """Updates and clears some data not needed after iteration step"""
@@ -79,7 +90,7 @@ class Replacing:
 
     def should_not_replace(self, replacement_words) -> bool:  # TODO: Detecting acronyms (by large quantity of meanings?)
         """Checks various contitions, when given word should not be replaced"""
-        word_in_ignored = self.selected_meaning.base_word in self.ignored_words
+        word_in_ignored = self.selected_meaning.base_word in self.ignored_words  # TODO: Detect common bigrams "w ogóle"
         no_word_to_replace = len(replacement_words) == 0
         probability_sum = sum(replacement_word[2] for replacement_word in self.replacement_words)
         random_not_replacing = random.random() > probability_sum

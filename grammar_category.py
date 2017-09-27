@@ -82,4 +82,9 @@ gender_examples = {
     "n": "nijaki"
 }
 
+number_names = {
+    Number.SINGULAR: "pojedyncza",
+    Number.PLURAL: "mnoga"
+}
+
 cases_order = ["nom", "gen", "dat", "acc", "inst", "loc", "voc"]
